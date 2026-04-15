@@ -6,7 +6,7 @@ npm-debug.log
 .terraform/
 *.tfstate
 *.tfstate.*
-.terraform.lock.hcl
+
 
 # macOS
 .DS_Store
