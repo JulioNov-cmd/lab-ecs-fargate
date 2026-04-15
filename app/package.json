@@ -1,0 +1,12 @@
+{
+  "name": "ecs-fargate-lab",
+  "version": "1.0.0",
+  "description": "Laboratorio base para ECS Fargate con ALB, OIDC y CI/CD",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}

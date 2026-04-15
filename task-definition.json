@@ -1,0 +1,35 @@
+{
+  "family": "ecs-fargate-lab",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "256",
+  "memory": "512",
+  "executionRoleArn": "arn:aws:iam::116981775264:role/ecs-fargate-lab-ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::116981775264:role/ecs-fargate-lab-ecsTaskRole",
+  "containerDefinitions": [
+    {
+      "name": "ecs-fargate-lab",
+      "image": "116981775264.dkr.ecr.us-east-1.amazonaws.com/ecs-fargate-lab:latest",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 3000,
+          "hostPort": 3000,
+          "protocol": "tcp"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/ecs-fargate-lab",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "ecs-fargate-lab"
+        }
+      },
+      "runtimePlatform": {
+        "cpuArchitecture": "X86_64",
+        "operatingSystemFamily": "LINUX"
+      }
+    }
+  ]
+}
