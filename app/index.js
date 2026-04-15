@@ -9,6 +9,7 @@ app.get("/", (req, res) => {
     <html>
     <head>
       <title>ECS Fargate Lab</title>
+	<title>ALDO NOVAS</title> 
       <style>
         body {
           margin: 0;
