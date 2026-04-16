@@ -9,7 +9,6 @@ app.get("/", (req, res) => {
     <html>
     <head>
       <title>ECS Fargate Lab</title>
-	<title>ALDO NOVAS</title> 
       <style>
         body {
           margin: 0;
@@ -45,6 +44,7 @@ app.get("/", (req, res) => {
     <body>
       <div class="container">
         <h1>🚀 ECS Fargate Lab</h1>
+	<h1>Vamos empezando</h1>
         <p>CI/CD funcionando con GitHub Actions + OIDC</p>
         <p>Deploy automático en AWS</p>
         <div class="badge">Deployment OK</div>
