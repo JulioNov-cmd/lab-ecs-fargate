@@ -87,3 +87,4 @@ app.get("/health", (req, res) => {
 app.listen(port, "0.0.0.0", () => {
   console.log(`App listening on port ${port}`);
 });
+app.disable('x-powered-by');
