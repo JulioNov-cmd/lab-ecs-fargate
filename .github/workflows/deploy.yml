@@ -50,17 +50,26 @@ jobs:
 # ------------------------
 # 2. IMAGE SCAN (Shift Left)
 # ------------------------
-  security-scan:
-    runs-on: ubuntu-latest
-    needs: build
+   security-scan:
+  runs-on: ubuntu-latest
+  needs: build
 
-    steps:
-      - name: Scan image (Trivy)
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: ${{ needs.build.outputs.image }}
-          severity: CRITICAL,HIGH
-          exit-code: 1   # 🔴 GATE REAL
+  steps:
+    - name: Configure AWS (OIDC)
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: arn:aws:iam::116981775264:role/ecs-fargate-lab-github-actions-role
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Login to ECR
+      uses: aws-actions/amazon-ecr-login@v2
+
+    - name: Scan image (Trivy)
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: ${{ needs.build.outputs.image }}
+        severity: CRITICAL,HIGH
+        exit-code: 1
 
 # ------------------------
 # 3. DEPLOY STAGING
