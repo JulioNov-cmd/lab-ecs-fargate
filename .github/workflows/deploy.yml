@@ -40,12 +40,10 @@ jobs:
         id: meta
         run: |
           IMAGE=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
-
           docker buildx build \
             --platform linux/amd64 \
             -t $IMAGE \
             --push ./app
-
           echo "image=$IMAGE" >> $GITHUB_OUTPUT
 
   # ------------------------
@@ -88,24 +86,24 @@ jobs:
   # ------------------------
   # 4. DAST (ZAP)
   # ------------------------
-   zap-scan:
-  runs-on: ubuntu-latest
-  needs: deploy-staging
+  zap-scan:
+    runs-on: ubuntu-latest
+    needs: deploy-staging
 
-  steps:
-    - uses: actions/checkout@v4
+    steps:
+      - uses: actions/checkout@v4
 
-    - name: Fix permissions
-      run: chmod -R 777 .
+      - name: Fix permissions
+        run: chmod -R 777 .
 
-    - name: Wait for service
-      run: sleep 60
+      - name: Wait for service
+        run: sleep 60
 
-    - name: ZAP Scan
-      uses: zaproxy/action-baseline@v0.10.0
-      with:
-        target: "http://ecs-fargate-lab-alb-1574663482.us-east-1.elb.amazonaws.com"
-        fail_action: true
+      - name: ZAP Scan
+        uses: zaproxy/action-baseline@v0.10.0
+        with:
+          target: "http://ecs-fargate-lab-alb-1574663482.us-east-1.elb.amazonaws.com"
+          fail_action: true
 
   # ------------------------
   # 5. DEPLOY PROD (GATED)
@@ -117,3 +115,4 @@ jobs:
     steps:
       - name: Deploy ECS PROD
         run: echo "Deploy to production..."
+        
