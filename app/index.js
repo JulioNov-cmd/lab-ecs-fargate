@@ -1,7 +1,29 @@
 const express = require("express");
-const app = express();
+const helmet = require("helmet");
 
+const app = express();
 const port = process.env.PORT || 3000;
+
+// 🔐 Seguridad básica con Helmet
+app.use(helmet());
+
+// 🔐 Headers adicionales personalizados (para cubrir lo que ZAP marcó)
+app.use((req, res, next) => {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "DENY");
+  res.setHeader("X-XSS-Protection", "1; mode=block");
+
+  // 🔐 CSP básico (puedes hacerlo más estricto después)
+  res.setHeader(
+    "Content-Security-Policy",
+    "default-src 'self'; style-src 'self' 'unsafe-inline';"
+  );
+
+  // 🔐 Evitar leak de tecnología
+  res.removeHeader("X-Powered-By");
+
+  next();
+});
 
 app.get("/", (req, res) => {
   res.send(`
@@ -44,7 +66,7 @@ app.get("/", (req, res) => {
     <body>
       <div class="container">
         <h1>🚀 Laboratorio Julio y Aldo</h1>
-	<h1>Vamos empezando</h1>
+        <h1>Vamos empezando</h1>
         <p>CI/CD funcionando con GitHub Actions + OIDC</p>
         <p>Deploy automático en AWS</p>
         <div class="badge">Deployment OK</div>
