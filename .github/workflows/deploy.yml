@@ -6,7 +6,6 @@ on:
       - main
       - feature/**
 
-# Permisos globales básicos
 permissions:
   id-token: write
   contents: read
@@ -115,7 +114,6 @@ jobs:
   zap-scan:
     runs-on: ubuntu-latest
     needs: deploy
-    # ¡Importante! Permisos específicos para que ZAP pueda crear el Issue
     permissions:
       contents: read
       issues: write
