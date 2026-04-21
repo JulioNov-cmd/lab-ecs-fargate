@@ -43,7 +43,7 @@ app.get("/", (req, res) => {
     </head>
     <body>
       <div class="container">
-        <h1>🚀 Aldo Novas</h1>
+        <h1>🚀 Laboratorio Julio y Aldo</h1>
 	<h1>Vamos empezando</h1>
         <p>CI/CD funcionando con GitHub Actions + OIDC</p>
         <p>Deploy automático en AWS</p>
