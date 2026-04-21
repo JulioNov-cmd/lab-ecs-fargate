@@ -1,9 +1,8 @@
-name: Deploy to ECS Fargate
+name: DevSecOps Pipeline
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
 
 permissions:
   id-token: write
@@ -12,63 +11,96 @@ permissions:
 env:
   AWS_REGION: us-east-1
   ECR_REPOSITORY: ecs-fargate-lab
-  ECS_CLUSTER: ecs-fargate-lab-cluster
-  ECS_SERVICE: ecs-fargate-lab-service
-  CONTAINER_NAME: ecs-fargate-lab
 
 jobs:
-  deploy:
+
+# ------------------------
+# 1. BUILD
+# ------------------------
+  build:
     runs-on: ubuntu-latest
+    outputs:
+      image: ${{ steps.meta.outputs.image }}
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Configure AWS credentials from OIDC
+      - name: Configure AWS (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::116981775264:role/ecs-fargate-lab-github-actions-role
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Log in to Amazon ECR
+      - name: Login ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build and push image
-        env:
-          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          IMAGE_TAG: ${{ github.sha }}
+      - name: Build & Push
+        id: meta
         run: |
-          docker buildx create --use --name gha-builder || true
-          docker buildx inspect --bootstrap
+          IMAGE=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
+
           docker buildx build \
             --platform linux/amd64 \
-            -t $REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
-            -t $REGISTRY/$ECR_REPOSITORY:latest \
+            -t $IMAGE \
             --push ./app
 
-      - name: Render Amazon ECS task definition
-        id: render-task-def
-        uses: aws-actions/amazon-ecs-render-task-definition@v1
-        with:
-          task-definition: task-definition.json
-          container-name: ${{ env.CONTAINER_NAME }}
-          image: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
+          echo "image=$IMAGE" >> $GITHUB_OUTPUT
 
-      - name: Deploy Amazon ECS task definition
-        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+# ------------------------
+# 2. IMAGE SCAN (Shift Left)
+# ------------------------
+  security-scan:
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Scan image (Trivy)
+        uses: aquasecurity/trivy-action@master
         with:
-          task-definition: ${{ steps.render-task-def.outputs.task-definition }}
-          service: ${{ env.ECS_SERVICE }}
-          cluster: ${{ env.ECS_CLUSTER }}
-          wait-for-service-stability: true
-      - name: Wait for service to be ready
+          image-ref: ${{ needs.build.outputs.image }}
+          severity: CRITICAL,HIGH
+          exit-code: 1   # 🔴 GATE REAL
+
+# ------------------------
+# 3. DEPLOY STAGING
+# ------------------------
+  deploy-staging:
+    runs-on: ubuntu-latest
+    needs: security-scan
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy ECS (staging)
+        # mismo deploy que ya tienes pero apuntando a servicio staging
+        run: echo "Deploy to staging..."
+
+# ------------------------
+# 4. DAST (ZAP)
+# ------------------------
+  zap-scan:
+    runs-on: ubuntu-latest
+    needs: deploy-staging
+
+    steps:
+      - name: Wait for service
         run: sleep 60
 
-      - name: OWASP ZAP Scan
+      - name: ZAP Scan
         uses: zaproxy/action-baseline@v0.10.0
         with:
-          target: "http://ecs-fargate-lab-alb-1574663482.us-east-1.elb.amazonaws.com"
-          fail_action: false          
+          target: "http://staging-alb-url"
+          fail_action: true   # 🔴 ahora sí bloquea
 
-          
+# ------------------------
+# 5. DEPLOY PROD (GATED)
+# ------------------------
+  deploy-prod:
+    runs-on: ubuntu-latest
+    needs: zap-scan
+
+    steps:
+      - name: Deploy ECS PROD
+        run: echo "Deploy to production..."
+        
