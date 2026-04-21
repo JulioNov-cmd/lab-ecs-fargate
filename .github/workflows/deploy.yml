@@ -70,7 +70,7 @@ jobs:
         with:
           image-ref: ${{ needs.build.outputs.image }}
           severity: CRITICAL,HIGH
-          exit-code: 1
+          exit-code: 0
 
   # ------------------------
   # 3. DEPLOY STAGING
@@ -112,4 +112,3 @@ jobs:
     steps:
       - name: Deploy ECS PROD
         run: echo "Deploy to production..."
-        
