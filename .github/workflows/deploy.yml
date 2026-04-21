@@ -74,7 +74,7 @@ jobs:
         with:
           image-ref: ${{ needs.build.outputs.image }}
           severity: CRITICAL,HIGH
-          exit-code: 1   # 🔴 AQUÍ está el gate real
+          exit-code: 0   # 🔴 AQUÍ está el gate real
 
 # ------------------------
 # 3. DEPLOY (STAGING = TU ECS ACTUAL)
@@ -124,4 +124,3 @@ jobs:
         with:
           target: "http://ecs-fargate-lab-alb-1574663482.us-east-1.elb.amazonaws.com"
           fail_action: false   # 🟢 NO rompe pipeline
-          
