@@ -18,13 +18,12 @@ env:
   CONTAINER_NAME: ecs-fargate-lab
 
 jobs:
-  # ------------------------
-  # 1. BUILD
-  # ------------------------
+
   build:
     runs-on: ubuntu-latest
     outputs:
       image: ${{ steps.meta.outputs.image }}
+
     steps:
       - uses: actions/checkout@v4
 
@@ -43,18 +42,18 @@ jobs:
         run: |
           IMAGE=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
           echo "Building image: $IMAGE"
+
           docker buildx build \
             --platform linux/amd64 \
             -t $IMAGE \
             --push ./app
+
           echo "image=$IMAGE" >> $GITHUB_OUTPUT
 
-  # ------------------------
-  # 2. IMAGE SCAN (REAL GATE)
-  # ------------------------
   security-scan:
     runs-on: ubuntu-latest
     needs: build
+
     steps:
       - name: Configure AWS (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
@@ -72,14 +71,10 @@ jobs:
           severity: CRITICAL
           exit-code: 1
 
-  # ------------------------
-  # 3. DEPLOY (ECS REAL)
-  # ------------------------
   deploy:
     runs-on: ubuntu-latest
-    needs:
-      - build
-      - security-scan
+    needs: [build, security-scan]
+
     steps:
       - uses: actions/checkout@v4
 
@@ -108,15 +103,10 @@ jobs:
           cluster: ${{ env.ECS_CLUSTER }}
           wait-for-service-stability: true
 
-  # ------------------------
-  # 4. DAST (NO BLOQUEA)
-  # ------------------------
   zap-scan:
     runs-on: ubuntu-latest
     needs: deploy
-    permissions:
-      contents: read
-      issues: write
+
     steps:
       - name: Wait for service
         run: sleep 60
@@ -124,6 +114,5 @@ jobs:
       - name: ZAP Scan (report only)
         uses: zaproxy/action-baseline@v0.10.0
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
           target: "http://ecs-fargate-lab-alb-1574663482.us-east-1.elb.amazonaws.com"
           fail_action: false
