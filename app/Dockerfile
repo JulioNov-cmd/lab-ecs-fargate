@@ -2,15 +2,15 @@ FROM node:20-alpine3.20
 
 WORKDIR /app
 
-# Actualizamos paquetes del sistema
+# Actualizamos paquetes del sistema y npm
 RUN apk update && apk upgrade && \
     npm install -g npm@latest && \
     npm cache clean --force
 
-# Copiamos AMBOS archivos. El lockfile es la ley aquí.
+# Copiamos solo los archivos de la carpeta app
 COPY package*.json ./
 
-# 'npm ci' es más rápido y exacto para pipelines
+# Instalamos y limpiamos caché inmediatamente en la misma capa
 RUN npm ci --omit=dev && \
     npm cache clean --force
 
