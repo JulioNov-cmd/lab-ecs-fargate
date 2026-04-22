@@ -4,23 +4,40 @@ const helmet = require("helmet");
 const app = express();
 const port = process.env.PORT || 3000;
 
-// 🔐 Seguridad básica con Helmet
+// 🔐 Quitar fingerprinting desde el inicio
+app.disable("x-powered-by");
+
+// 🔐 Seguridad base
 app.use(helmet());
 
-// 🔐 Headers adicionales personalizados (para cubrir lo que ZAP marcó)
+// 🔐 Hardening avanzado (ZAP clean)
 app.use((req, res, next) => {
+
+  // Cache control
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
+
+  // Protección básica
   res.setHeader("X-Content-Type-Options", "nosniff");
   res.setHeader("X-Frame-Options", "DENY");
   res.setHeader("X-XSS-Protection", "1; mode=block");
 
-  // 🔐 CSP básico (puedes hacerlo más estricto después)
+  // CSP mejorado
   res.setHeader(
     "Content-Security-Policy",
-    "default-src 'self'; style-src 'self' 'unsafe-inline';"
+    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'self';"
   );
 
-  // 🔐 Evitar leak de tecnología
-  res.removeHeader("X-Powered-By");
+  // Permissions Policy
+  res.setHeader(
+    "Permissions-Policy",
+    "geolocation=(), microphone=(), camera=()"
+  );
+
+  // Cross-Origin policies
+  res.setHeader("Cross-Origin-Embedder-Policy", "require-corp");
+  res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
 
   next();
 });
@@ -87,4 +104,3 @@ app.get("/health", (req, res) => {
 app.listen(port, "0.0.0.0", () => {
   console.log(`App listening on port ${port}`);
 });
-app.disable('x-powered-by');
