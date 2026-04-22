@@ -1,17 +1,24 @@
-FROM node:20-alpine
+# Usamos una versión de Node con Alpine actualizado
+FROM node:20-alpine3.20
 
 WORKDIR /app
 
-# 1. Actualizamos npm globalmente para eliminar las vulnerabilidades detectadas por Trivy
-RUN npm install -g npm@latest
+# Actualizamos paquetes del sistema y npm, luego LIMPIAMOS el caché
+RUN apk update && apk upgrade && \
+    npm install -g npm@latest && \
+    npm cache clean --force
 
 COPY package*.json ./
 
-RUN npm install --omit=dev
+# Instalamos dependencias y volvemos a limpiar el caché en la misma capa
+RUN npm install --omit=dev && \
+    npm cache clean --force
 
 COPY . .
 
+# Seguridad: No correr como root (Hardening real)
+USER node
+
 EXPOSE 3000
 
-# 2. Buena práctica para ECS: Ejecutar el proceso directamente para el graceful shutdown
 CMD ["node", "index.js"]
