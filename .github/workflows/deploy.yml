@@ -68,7 +68,7 @@ jobs:
         uses: aws-actions/amazon-ecr-login@v2
 
       - name: Trivy Scan (CRITICAL BLOCK)
-        uses: aquasecurity/trivy-action@0.20.0
+        uses: aquasecurity/trivy-action@master  # Volvamos a master o usa v0.20.0
         with:
           image-ref: ${{ needs.build.outputs.image }}
           severity: CRITICAL,HIGH
