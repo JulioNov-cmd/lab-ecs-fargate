@@ -1,14 +1,17 @@
-name: DevSecOps Pipeline
+name: DevSecOps Pipeline Hardened
 
 on:
   push:
     branches:
       - main
-      - feature/**
+
+  pull_request:
+    branches:
+      - main
 
 permissions:
-  id-token: write
   contents: read
+  id-token: write
 
 env:
   AWS_REGION: us-east-1
@@ -17,15 +20,14 @@ env:
   ECS_SERVICE: ecs-fargate-lab-service
   CONTAINER_NAME: ecs-fargate-lab
 
+# ------------------------
+# 1. BUILD & PUSH
+# ------------------------
 jobs:
-
-  # ------------------------
-  # 1. BUILD
-  # ------------------------
   build:
     runs-on: ubuntu-latest
     outputs:
-      image: ${{ steps.meta.outputs.image }}
+      image: ${{ steps.build.outputs.image }}
 
     steps:
       - uses: actions/checkout@v4
@@ -36,27 +38,29 @@ jobs:
           role-to-assume: arn:aws:iam::116981775264:role/ecs-fargate-lab-github-actions-role
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Login ECR
+      - name: Login to ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build & Push
-        id: meta
+      - name: Build & Push Image
+        id: build
         run: |
           IMAGE=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
-          echo "Building image: $IMAGE"
+
+          echo "Building secure image: $IMAGE"
 
           docker buildx build \
             --platform linux/amd64 \
+            --no-cache \
             -t $IMAGE \
             --push ./app
 
           echo "image=$IMAGE" >> $GITHUB_OUTPUT
 
-  # ------------------------
-  # 2. IMAGE SCAN
-  # ------------------------
-  security-scan:
+# ------------------------
+# 2. SECURITY GATES (CI)
+# ------------------------
+  security_scan:
     runs-on: ubuntu-latest
     needs: build
 
@@ -67,22 +71,41 @@ jobs:
           role-to-assume: arn:aws:iam::116981775264:role/ecs-fargate-lab-github-actions-role
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Login to ECR
+      - name: Login ECR
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Scan image (Trivy - BLOCKING)
+      # 🔥 BLOQUEANTE REAL
+      - name: Trivy Scan (CRITICAL BLOCK)
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: ${{ needs.build.outputs.image }}
-          severity: CRITICAL
-          exit-code: 1   # 🔥 ahora sí bloquea vulnerabilidades
+          severity: CRITICAL,HIGH
+          exit-code: 1
 
-  # ------------------------
-  # 3. DEPLOY ECS
-  # ------------------------
+      # 🔍 SBOM (mejora DevSecOps real)
+      - name: Generate SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          image: ${{ needs.build.outputs.image }}
+
+# ------------------------
+# 3. APPROVAL GATE (CONTROL HUMANO)
+# ------------------------
+  approval:
+    runs-on: ubuntu-latest
+    needs: security_scan
+    environment: production
+
+    steps:
+      - name: Manual approval gate
+        run: echo "Waiting for approval via GitHub Environments"
+
+# ------------------------
+# 4. DEPLOY
+# ------------------------
   deploy:
     runs-on: ubuntu-latest
-    needs: [build, security-scan]
+    needs: approval
 
     steps:
       - uses: actions/checkout@v4
@@ -93,38 +116,35 @@ jobs:
           role-to-assume: arn:aws:iam::116981775264:role/ecs-fargate-lab-github-actions-role
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Debug image
-        run: echo "Deploying image: ${{ needs.build.outputs.image }}"
-
       - name: Render task definition
-        id: render-task
+        id: render
         uses: aws-actions/amazon-ecs-render-task-definition@v1
         with:
           task-definition: task-definition.json
           container-name: ${{ env.CONTAINER_NAME }}
           image: ${{ needs.build.outputs.image }}
 
-      - name: Deploy ECS
+      - name: Deploy to ECS (stable required)
         uses: aws-actions/amazon-ecs-deploy-task-definition@v2
         with:
-          task-definition: ${{ steps.render-task.outputs.task-definition }}
+          task-definition: ${{ steps.render.outputs.task-definition }}
           service: ${{ env.ECS_SERVICE }}
           cluster: ${{ env.ECS_CLUSTER }}
           wait-for-service-stability: true
 
-  # ------------------------
-  # 4. DAST (ZAP)
-  # ------------------------
-  zap-scan:
+# ------------------------
+# 5. DAST (POST DEPLOY)
+# ------------------------
+  zap_scan:
     runs-on: ubuntu-latest
     needs: deploy
 
     steps:
-      - name: Wait for service
-        run: sleep 60
+      - name: Wait for app stabilization
+        run: sleep 90
 
-      - name: ZAP Scan (report only)
+      - name: ZAP Baseline Scan
         uses: zaproxy/action-baseline@v0.10.0
         with:
           target: "http://ecs-fargate-lab-alb-1574663482.us-east-1.elb.amazonaws.com"
-          fail_action: false   # no rompe pipeline
+          fail_action: false
