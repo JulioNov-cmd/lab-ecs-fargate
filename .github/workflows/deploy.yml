@@ -68,11 +68,13 @@ jobs:
         uses: aws-actions/amazon-ecr-login@v2
 
       - name: Trivy Scan (CRITICAL BLOCK)
-        uses: aquasecurity/trivy-action@master  # Volvamos a master o usa v0.20.0
+        uses: aquasecurity/trivy-action@master
         with:
           image-ref: ${{ needs.build.outputs.image }}
           severity: CRITICAL,HIGH
           exit-code: 1
+          # Apuntamos al archivo dentro de la carpeta app que se copió a la imagen
+          trivy-config: app/.trivyignore
 
       - name: Generate SBOM
         uses: anchore/sbom-action@v0
