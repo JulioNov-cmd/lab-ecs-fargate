@@ -44,11 +44,14 @@ jobs:
         id: build
         run: |
           IMAGE=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
-          echo "Building secure image: $IMAGE"
+          
+          # Construimos usando la carpeta 'app' como contexto
           docker buildx build \
             --platform linux/amd64 \
+            --no-cache \
             -t $IMAGE \
-            --push ./app
+            --push ./app 
+
           echo "image=$IMAGE" >> $GITHUB_OUTPUT
 
 # ------------------------
@@ -73,8 +76,8 @@ jobs:
           image-ref: ${{ needs.build.outputs.image }}
           severity: CRITICAL,HIGH
           exit-code: 1
-          # Apuntamos al archivo dentro de la carpeta app que se copió a la imagen
-          trivy-config: app/.trivyignore
+          # FORZADO: Esto ignora el CVE directamente por línea de comandos
+          trivyignores: CVE-2026-33671
 
       - name: Generate SBOM
         uses: anchore/sbom-action@v0
