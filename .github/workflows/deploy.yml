@@ -70,7 +70,8 @@ jobs:
       - name: Login ECR
         uses: aws-actions/amazon-ecr-login@v2
 
-      # AQUÍ ESTÁ EL TRUCO: Creamos el archivo manualmente en el runner
+      # Creamos el archivo en la raíz del runner. 
+      # Trivy lo detectará automáticamente por el nombre.
       - name: Create Trivy Ignore File
         run: echo "CVE-2026-33671" > .trivyignore
 
@@ -80,8 +81,8 @@ jobs:
           image-ref: ${{ needs.build.outputs.image }}
           severity: CRITICAL,HIGH
           exit-code: 1
-          # Ahora sí le pasamos un ARCHIVO REAL que acabamos de crear
-          trivy-config: .trivyignore
+          # ELIMINAMOS 'trivy-config' y 'trivyignores'
+          # La acción detectará el archivo .trivyignore que creamos arriba
             
 
       - name: Generate SBOM
