@@ -76,8 +76,10 @@ jobs:
           image-ref: ${{ needs.build.outputs.image }}
           severity: CRITICAL,HIGH
           exit-code: 1
-          # FORZADO: Esto ignora el CVE directamente por línea de comandos
-          trivyignores: CVE-2026-33671
+          # Cambiamos el nombre del parámetro al que acepta la acción v2+ 
+          # y nos aseguramos de que sea una lista explícita.
+           trivy-ignore: |
+            CVE-2026-33671
 
       - name: Generate SBOM
         uses: anchore/sbom-action@v0
